@@ -1,7 +1,14 @@
 package com.example.zhaoy.weatherforecast.model.modelImp;
 
-import android.os.AsyncTask;
+import android.util.Log;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.example.zhaoy.weatherforecast.MyApplication;
 import com.example.zhaoy.weatherforecast.bean.Weather;
 import com.example.zhaoy.weatherforecast.callback.WeatherCallback;
 import com.example.zhaoy.weatherforecast.model.IWeatherModel;
@@ -10,54 +17,45 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.util.List;
 
-import javax.net.ssl.HttpsURLConnection;
 
 /**
  * Created by Administrator on 2016/12/14.
  */
 
 public class WeatherModel implements IWeatherModel {
+
+    private RequestQueue queue;
+
+    public WeatherModel(){
+        queue = Volley.newRequestQueue(MyApplication.getContext());
+    }
     /**
      * 处理数据并回传
      * @param weatherId
      */
     @Override
-    public void loadWeatherInfo(final String weatherId ,final WeatherCallback callback) {
-        final String weatherUrl = "https://free-api.heweather.com/v5/weather?city="+ weatherId +
+    public void loadWeatherInfo(String weatherId ,final WeatherCallback callback) {
+        String weatherUrl = "https://free-api.heweather.com/v5/weather?city="+ weatherId +
                 "&&key=b1f6ab435e824b859395e18cad58846d";
-        AsyncTask<String ,String ,String> task = new AsyncTask<String, String, String>() {
+        StringRequest request = new StringRequest(weatherUrl,
+                new Response.Listener<String>() {
             @Override
-            protected String doInBackground(String... params) {
+            public void onResponse(String response) {
                 try {
-                    URL url = new URL(weatherUrl);
-                    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-                    conn.setRequestMethod("GET");
-                    InputStream inputStream = conn.getInputStream();
-                    BufferedReader bufferedReader = new BufferedReader(
-                            new InputStreamReader(inputStream ,"utf-8")
-                    );
-                    String line = "";
-                    StringBuffer stringBuffer = new StringBuffer();
-                    while ((line = bufferedReader.readLine()) != null){
-                        stringBuffer.append(line);
-                    }
-                    String json = stringBuffer.toString();
-                    JSONObject object = new JSONObject(json);
-                    String status = object.getString("status");
-                    if ("ok".equals(status)){
-                        JSONObject suggestion = object.getJSONObject("suggestion");
-                        JSONArray dailyForecast = object.getJSONArray("daily_forecast");
-                        JSONObject now = object.getJSONObject("now");
-                        JSONObject basic = object.getJSONObject("basic");
-                        JSONObject aQI = object.getJSONObject("aqi");
+                    JSONObject object = new JSONObject(response);
+                    JSONArray heWeather = object.getJSONArray("HeWeather5");
+                    JSONObject wObj = heWeather.getJSONObject(0);
+                    String status = wObj.getString("status");
+                    if ("ok".equals(status)) {
+                        JSONObject suggestion = wObj.getJSONObject("suggestion");
+                        JSONArray dailyForecast = wObj.getJSONArray("daily_forecast");
+                        JSONObject now = wObj.getJSONObject("now");
+                        JSONObject basic = wObj.getJSONObject("basic");
+                        JSONObject aQI = wObj.getJSONObject("aqi");
                         JSONObject cityObj = aQI.getJSONObject("city");
+                        Log.v("aqi",aQI.toString());
                         String aqi = cityObj.getString("aqi");//aqi指数
                         String pm25 = cityObj.getString("pm25");//pm2.5指数
                         String city = basic.getString("city");//城市名
@@ -82,22 +80,21 @@ public class WeatherModel implements IWeatherModel {
                         weather.setStatus(currentStatus);
                         weather.setTmp(tmp);
                         weather.setCurrentCity(city);
-
                         //回调
                         callback.onSuccess(weather);
-                    }else {
+                    } else {
                         callback.onError();
                     }
-
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                return null;
             }
-        };
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+
+            }
+        });
+        queue.add(request);
     }
 }

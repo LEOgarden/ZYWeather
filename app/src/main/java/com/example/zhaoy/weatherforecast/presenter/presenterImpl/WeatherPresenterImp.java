@@ -1,9 +1,15 @@
-package com.example.zhaoy.weatherforecast.presenter;
+package com.example.zhaoy.weatherforecast.presenter.presenterImpl;
+
+import android.content.Context;
+import android.support.v7.app.AlertDialog;
+import android.util.Log;
+import android.widget.Toast;
 
 import com.example.zhaoy.weatherforecast.bean.Weather;
 import com.example.zhaoy.weatherforecast.callback.WeatherCallback;
 import com.example.zhaoy.weatherforecast.model.IWeatherModel;
 import com.example.zhaoy.weatherforecast.model.modelImp.WeatherModel;
+import com.example.zhaoy.weatherforecast.presenter.IWeatherPresenter;
 import com.example.zhaoy.weatherforecast.view.IShowWeather;
 
 import java.util.Objects;
@@ -34,6 +40,7 @@ public class WeatherPresenterImp implements IWeatherPresenter {
 
             @Override
             public void onError() {
+               Log.v("ERROR","没有获取到数据");
             }
         });
 
