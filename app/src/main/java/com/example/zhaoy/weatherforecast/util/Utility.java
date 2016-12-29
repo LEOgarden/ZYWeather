@@ -91,13 +91,20 @@ public class Utility {
         return false;
     }
     public static Weather handleWeatherResponse(String response){
+        Weather weather = new Weather();
         try {
             JSONObject object = new JSONObject(response);
-            Weather weather = new Weather();
-            weather.setCurrentCity(object.getString(""));
+            weather.setCurrentCity(object.getString("currentCity"));
+            weather.setStatus(object.getString("status"));
+            weather.setDate(object.getString("data"));
+            weather.setTmp(object.getString("tmp"));
+            weather.setaQI(object.getString("aQI"));
+            weather.setpM(object.getString("pM"));
+            weather.setComfort(object.getString("comfort"));
+            weather.setSportSug(object.getString("sportSug"));
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        return null;
+        return weather;
     }
 }

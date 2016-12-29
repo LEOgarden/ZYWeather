@@ -1,15 +1,20 @@
 package com.example.zhaoy.weatherforecast.activity;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
-import android.support.v7.app.ActionBar;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -22,6 +27,8 @@ import com.example.zhaoy.weatherforecast.presenter.IPicturePresenter;
 import com.example.zhaoy.weatherforecast.presenter.IWeatherPresenter;
 import com.example.zhaoy.weatherforecast.presenter.presenterImpl.PicturePresenterImpl;
 import com.example.zhaoy.weatherforecast.presenter.presenterImpl.WeatherPresenterImp;
+import com.example.zhaoy.weatherforecast.service.AutoUpdateService;
+import com.example.zhaoy.weatherforecast.util.Utility;
 import com.example.zhaoy.weatherforecast.view.IShowPicture;
 import com.example.zhaoy.weatherforecast.view.IShowWeather;
 
@@ -49,11 +56,17 @@ public class WeatherActivity extends AppCompatActivity implements IShowWeather ,
     private TextView sportText;
     //背景图
     private ImageView bingPicImg;
+    //手动gengxin
+    public SwipeRefreshLayout swipeRefresh;
+    private Button navButton;
+    public DrawerLayout drawerLayout;
+    private String weatherId;
 
-    private IWeatherPresenter presenter;
+    public IWeatherPresenter presenter;
     private Weather weather;
 
     private IPicturePresenter picPresenter;
+
 
     //更新天气handler
     private Handler handler = new Handler() {
@@ -71,6 +84,15 @@ public class WeatherActivity extends AppCompatActivity implements IShowWeather ,
                     comfortText.setText("生活指南：" + weather.getComfort());
                     carWashtext.setText("洗车建议：" + weather.getCarWashing());
                     sportText.setText("运动建议：" + weather.getSportSug());
+                    //缓存到SharedPreferences中
+                    //1.实例化Sharedpreferences对象
+                    SharedPreferences mySharedPreferences = getSharedPreferences("weather", Activity.MODE_PRIVATE);
+                    //2.实例化sharedPreferences.Editor对象
+                    SharedPreferences.Editor editor = mySharedPreferences.edit();
+                    //3.保存数据
+                    editor.putString("weather",weather.toString());
+                    //4.提交当前数据
+                    editor.commit();
                     break;
             }
         }
@@ -92,7 +114,6 @@ public class WeatherActivity extends AppCompatActivity implements IShowWeather ,
                             Glide.with(getApplicationContext()).load(bingPic).into(bingPicImg);
                         }
                     });
-
             }
         }
     };
@@ -100,7 +121,6 @@ public class WeatherActivity extends AppCompatActivity implements IShowWeather ,
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_weather);
         if (Build.VERSION.SDK_INT >= 21) {
             View decorView = getWindow().getDecorView();
             int option = View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -110,29 +130,42 @@ public class WeatherActivity extends AppCompatActivity implements IShowWeather ,
             getWindow().setNavigationBarColor(Color.TRANSPARENT);
             getWindow().setStatusBarColor(Color.TRANSPARENT);
         }
-        ActionBar actionBar = getSupportActionBar();
-        actionBar.hide();
+        setContentView(R.layout.activity_weather);
         initView();//初始化控件
-        String weatherId = getIntent().getStringExtra("weather_id");
-        presenter = new WeatherPresenterImp(this);
-        presenter.loadWeatherInfo(weatherId);
-        picPresenter = new PicturePresenterImpl(this);
-        picPresenter.loadPicture();
-
-        /*SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+//        picPresenter = new PicturePresenterImpl(this);
+//        picPresenter.loadPicture();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather",null);
+        Log.v("weatherString",weatherString+"");
         if (weatherString != null){
             //有缓存时直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
             showWeatherView(weather);
-        }*/
+        }else{
+            weatherId = getIntent().getStringExtra("weather_id");
+            Log.v("weatherId",weatherId);
+            presenter.loadWeatherInfo(weatherId);
+        }
+        setListener();//设置监听
+        //把weatherId传给service
+        Intent idIntent = new Intent(this, AutoUpdateService.class);
+        idIntent.putExtra("weather_id",weatherId);
+        startService(idIntent);
+    }
+
+    private void setListener() {
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
     }
 
     /**
      * 初始化控件
      */
     private void initView() {
-        Log.v("控件初始化","执行");
         weatherLayout = (ScrollView) findViewById(R.id.weather_layout);
         titleCity = (TextView) findViewById(R.id.title_city);
         titleUpdate = (TextView) findViewById(R.id.title_updateTime);
@@ -145,7 +178,12 @@ public class WeatherActivity extends AppCompatActivity implements IShowWeather ,
         carWashtext = (TextView) findViewById(R.id.comfort_text);
         sportText = (TextView) findViewById(R.id.sport_text);
         bingPicImg = (ImageView) findViewById(R.id.bing_pic_img);
+        swipeRefresh = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
+        navButton = (Button) findViewById(R.id.nav_button);
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        presenter = new WeatherPresenterImp(this);
     }
+
 
     @Override
     public void showWeatherView(final Weather weather) {

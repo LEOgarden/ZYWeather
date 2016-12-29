@@ -31,6 +31,7 @@ public class WeatherPresenterImp implements IWeatherPresenter {
 
     @Override
     public void loadWeatherInfo(String weatherId) {
+        Log.v("loadWeatherInfo","zhixign");
         weatherModel.loadWeatherInfo(weatherId , new WeatherCallback() {
             @Override
             public void onSuccess(Object success) {
