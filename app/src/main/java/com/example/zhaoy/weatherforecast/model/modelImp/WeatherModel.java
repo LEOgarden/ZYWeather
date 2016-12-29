@@ -66,6 +66,9 @@ public class WeatherModel implements IWeatherModel {
                             String pm25 = cityObj.getString("pm25");//pm2.5指数
                             weather.setaQI(aqi);
                             weather.setpM(pm25);
+                        }else{
+                            weather.setaQI("未获取到数据");
+                            weather.setpM("未获取到数据");
                         }
                         String city = basic.getString("city");//城市名
                         JSONObject updateObj = basic.getJSONObject("update");
